@@ -328,3 +328,83 @@ class QuizApp:
             questions.delete(selected_index)
             self.load_questions()
             messagebox.showinfo("Sukses", "Soal berhasil dihapus.")
+
+    def play_quiz(self):
+        """Memainkan kuis."""
+        self.clear_screen()
+
+
+        quiz_data = questions.to_list()
+        if not quiz_data:
+            messagebox.showerror("Error", "Tidak ada soal untuk dimainkan.")
+            self.show_main_menu()
+            return
+
+
+        random.shuffle(quiz_data)
+        self.current_quiz = iter(quiz_data)
+        self.current_question = None
+        self.correct_answers = 0
+
+
+        self.next_question()
+
+
+    def next_question(self):
+        """Menampilkan pertanyaan berikutnya dalam kuis."""
+        try:
+            self.current_question = next(self.current_quiz)
+        except StopIteration:
+            if self.correct_answers >= 80:
+                messagebox.showinfo("Kuis Selesai", f"Anda mendapatkan skor tinggi 0w0 {round(self.correct_answers)} dari 100!")
+            elif self.correct_answers >= 50:
+                messagebox.showinfo("Kuis Selesai", f"Anda mendapatkan skor yang lumayan XD {round(self.correct_answers)} dari 100!")
+            else:
+                messagebox.showinfo("Kuis Selesai", f"Anda mendapatkan skor rendah :( {round(self.correct_answers)} dari 100!")
+            self.show_main_menu()
+            return
+
+
+        self.clear_screen()
+
+
+        tk.Label(self.root, text=self.current_question["question"], font=("Arial", 16)).pack(pady=10)
+
+
+        for option in self.current_question["options"]:
+            tk.Button(self.root, text=option, command=lambda opt=option: self.check_answer(opt)).pack(pady=5)
+
+
+    def check_answer(self, selected_option):
+        """Memeriksa jawaban yang dipilih."""
+        point = 100 / len(questions.to_list())
+        if selected_option == self.current_question["answer"]:
+            self.correct_answers += point
+        self.next_question()
+
+
+    def about_us(self):
+        """Menampilkan informasi tentang aplikasi."""
+        self.clear_screen()
+        tk.Label(self.root, text="Tentang Kami :D", font=("Arial", 16)).pack(pady=10)
+
+
+        tk.Label(self.root, text="KElOMPOK 6\n1.GIOFANI ARISTYO\n2.FABIO BANYU CYTO\n3.NADIA FARAJ A.S.\n4.HAFSA FAZILA ARRADHI\n",
+                font=("Arial", 18)).pack(padx=10)
+        tk.Label(self.root, text="Aplikasi Kuis Kelompok 6 v1.0").pack()
+        tk.Label(self.root, text="Dibuat dengan TKinter.").pack()
+        tk.Button(self.root, text="Kembali", command=self.show_main_menu).pack(pady=5)
+
+
+    def clear_screen(self):
+        """Menghapus semua widget di layar."""
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+
+# Menjalankan aplikasi
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.geometry("500x500")
+    app = QuizApp(root)
+    root.mainloop()
