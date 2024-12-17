@@ -110,3 +110,68 @@ sample_questions = [
 
 for q in sample_questions:
     questions.append(q)
+
+# Objek GUI
+class QuizApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Aplikasi Kuis Kelompok 6")
+        self.current_user = None
+        self.show_login()
+
+    def show_login(self):
+        """Menampilkan layar login."""
+        self.clear_screen()
+        tk.Label(self.root, text="Login", font=("Arial", 16)).pack(pady=10)
+
+        tk.Label(self.root, text="Username").pack()
+        self.username_entry = tk.Entry(self.root)
+        self.username_entry.pack()
+
+        tk.Label(self.root, text="Password").pack()
+        self.password_entry = tk.Entry(self.root, show="*")
+        self.password_entry.pack()
+
+        tk.Button(self.root, text="Login", command=self.login).pack(pady=5)
+        tk.Button(self.root, text="Register", command=self.show_register).pack()
+
+    def show_register(self):
+        """Menampilkan layar registrasi."""
+        self.clear_screen()
+        tk.Label(self.root, text="Register", font=("Arial", 16)).pack(pady=10)
+
+        tk.Label(self.root, text="Username").pack()
+        self.reg_username_entry = tk.Entry(self.root)
+        self.reg_username_entry.pack()
+
+        tk.Label(self.root, text="Password").pack()
+        self.reg_password_entry = tk.Entry(self.root, show="*")
+        self.reg_password_entry.pack()
+
+        tk.Button(self.root, text="Register", command=self.register).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.show_login).pack()
+
+    def login(self):
+        """Proses login pengguna."""
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        if username in accounts and accounts[username] == password:
+            self.current_user = username
+            self.show_main_menu()
+        else:
+            messagebox.showerror("Login Gagal", "Username atau password salah.")
+
+    def register(self):
+        """Proses registrasi pengguna baru."""
+        username = self.reg_username_entry.get()
+        password = self.reg_password_entry.get()
+
+        if username in accounts:
+            messagebox.showerror("Registrasi Gagal", "Username sudah ada.")
+        elif username and password:
+            accounts[username] = password
+            messagebox.showinfo("Registrasi Berhasil", "Anda sekarang dapat login.")
+            self.show_login()
+        else:
+            messagebox.showerror("Registrasi Gagal", "Masukkan username dan password.")
