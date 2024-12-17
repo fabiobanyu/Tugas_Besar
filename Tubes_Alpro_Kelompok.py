@@ -333,22 +333,18 @@ class QuizApp:
         """Memainkan kuis."""
         self.clear_screen()
 
-
         quiz_data = questions.to_list()
         if not quiz_data:
             messagebox.showerror("Error", "Tidak ada soal untuk dimainkan.")
             self.show_main_menu()
             return
 
-
         random.shuffle(quiz_data)
         self.current_quiz = iter(quiz_data)
         self.current_question = None
         self.correct_answers = 0
 
-
         self.next_question()
-
 
     def next_question(self):
         """Menampilkan pertanyaan berikutnya dalam kuis."""
@@ -364,16 +360,12 @@ class QuizApp:
             self.show_main_menu()
             return
 
-
         self.clear_screen()
-
 
         tk.Label(self.root, text=self.current_question["question"], font=("Arial", 16)).pack(pady=10)
 
-
         for option in self.current_question["options"]:
             tk.Button(self.root, text=option, command=lambda opt=option: self.check_answer(opt)).pack(pady=5)
-
 
     def check_answer(self, selected_option):
         """Memeriksa jawaban yang dipilih."""
@@ -382,12 +374,10 @@ class QuizApp:
             self.correct_answers += point
         self.next_question()
 
-
     def about_us(self):
         """Menampilkan informasi tentang aplikasi."""
         self.clear_screen()
         tk.Label(self.root, text="Tentang Kami :D", font=("Arial", 16)).pack(pady=10)
-
 
         tk.Label(self.root, text="KElOMPOK 6\n1.GIOFANI ARISTYO\n2.FABIO BANYU CYTO\n3.NADIA FARAJ A.S.\n4.HAFSA FAZILA ARRADHI\n",
                 font=("Arial", 18)).pack(padx=10)
@@ -395,12 +385,10 @@ class QuizApp:
         tk.Label(self.root, text="Dibuat dengan TKinter.").pack()
         tk.Button(self.root, text="Kembali", command=self.show_main_menu).pack(pady=5)
 
-
     def clear_screen(self):
         """Menghapus semua widget di layar."""
         for widget in self.root.winfo_children():
             widget.destroy()
-
 
 # Menjalankan aplikasi
 if __name__ == "__main__":
