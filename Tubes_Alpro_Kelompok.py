@@ -175,3 +175,156 @@ class QuizApp:
             self.show_login()
         else:
             messagebox.showerror("Registrasi Gagal", "Masukkan username dan password.")
+
+    def show_main_menu(self):
+        """Menampilkan menu utama setelah login."""
+        self.clear_screen()
+        tk.Label(self.root, text=f"Selamat datang, {self.current_user}", font=("Arial", 16)).pack(pady=10)
+
+        tk.Button(self.root, text="Manajemen Kuis", command=self.manage_quiz).pack(pady=5)
+        tk.Button(self.root, text="Mainkan Kuis", command=self.play_quiz).pack(pady=5)
+        tk.Button(self.root, text="Tentang Kami", command=self.about_us).pack(pady=5)
+        tk.Button(self.root, text="Logout", command=self.show_login).pack(pady=5)
+
+    def manage_quiz(self):
+        """Menampilkan layar manajemen kuis."""
+        self.clear_screen()
+        tk.Label(self.root, text="Manajemen Kuis", font=("Arial", 16)).pack(pady=10)
+
+        # Daftar soal
+        self.question_listbox = tk.Listbox(self.root, width=50)
+        self.question_listbox.pack(pady=5)
+        self.load_questions()
+
+        tk.Button(self.root, text="Tambah Soal", command=self.add_question).pack(pady=5)
+        tk.Button(self.root, text="Edit Soal", command=self.edit_question).pack(pady=5)
+        tk.Button(self.root, text="Hapus Soal", command=self.delete_question).pack(pady=5)
+        tk.Button(self.root, text="Kembali", command=self.show_main_menu).pack(pady=5)
+
+    def load_questions(self):
+        """Memuat daftar soal ke dalam listbox."""
+        self.question_listbox.delete(0, tk.END)
+        for i, q in enumerate(questions.to_list()):
+            self.question_listbox.insert(tk.END, f"{i+1}. {q['question']}")
+
+    def add_question(self):
+        """Menambahkan soal baru ke database."""
+        def save_question():
+            try:
+                question = question_entry.get()
+                options = [opt1_entry.get(), opt2_entry.get(), opt3_entry.get(), opt4_entry.get()]
+                answer = answer_entry.get()
+
+                if not question or not all(options) or not answer:
+                    raise ValueError("Semua field harus diisi.")
+
+                new_question = {"question": question, "options": options, "answer": answer}
+                questions.append(new_question)
+                self.load_questions()
+                add_window.destroy()
+                messagebox.showinfo("Sukses", "Soal berhasil ditambahkan.")
+            except ValueError as e:
+                messagebox.showerror("Error", str(e))
+
+        add_window = tk.Toplevel(self.root)
+        add_window.title("Tambah Soal")
+
+        tk.Label(add_window, text="Pertanyaan").pack()
+        question_entry = tk.Entry(add_window, width=50)
+        question_entry.pack()
+
+        tk.Label(add_window, text="Pilihan 1").pack()
+        opt1_entry = tk.Entry(add_window, width=50)
+        opt1_entry.pack()
+
+        tk.Label(add_window, text="Pilihan 2").pack()
+        opt2_entry = tk.Entry(add_window, width=50)
+        opt2_entry.pack()
+
+        tk.Label(add_window, text="Pilihan 3").pack()
+        opt3_entry = tk.Entry(add_window, width=50)
+        opt3_entry.pack()
+
+        tk.Label(add_window, text="Pilihan 4").pack()
+        opt4_entry = tk.Entry(add_window, width=50)
+        opt4_entry.pack()
+
+        tk.Label(add_window, text="Jawaban Benar").pack()
+        answer_entry = tk.Entry(add_window, width=50)
+        answer_entry.pack()
+
+        tk.Button(add_window, text="Simpan", command=save_question).pack(pady=5)
+
+    def edit_question(self):
+        """Mengedit soal yang dipilih."""
+        selected = self.question_listbox.curselection()
+        if not selected:
+            messagebox.showerror("Error", "Pilih soal untuk diedit")
+
+        def save_edited_question():
+            try:
+                question = question_entry.get()
+                options = [opt1_entry.get(), opt2_entry.get(), opt3_entry.get(), opt4_entry.get()]
+                answer = answer_entry.get()
+
+                if not question or not all(options) or not answer:
+                    raise ValueError("Semua field harus diisi.")
+
+                updated_question = {"question": question, "options": options, "answer": answer}
+                questions.update(selected_index, updated_question)
+                self.load_questions()
+                edit_window.destroy()
+                messagebox.showinfo("Sukses", "Soal berhasil diperbarui.")
+            except ValueError as e:
+                messagebox.showerror("Error", str(e))
+
+        selected_index = selected[0]
+        question_data = questions.get(selected_index)
+
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("Edit Soal")
+
+        tk.Label(edit_window, text="Pertanyaan").pack()
+        question_entry = tk.Entry(edit_window, width=50)
+        question_entry.insert(0, question_data['question'])
+        question_entry.pack()
+
+        tk.Label(edit_window, text="Pilihan 1").pack()
+        opt1_entry = tk.Entry(edit_window, width=50)
+        opt1_entry.insert(0, question_data['options'][0])
+        opt1_entry.pack()
+
+        tk.Label(edit_window, text="Pilihan 2").pack()
+        opt2_entry = tk.Entry(edit_window, width=50)
+        opt2_entry.insert(0, question_data['options'][1])
+        opt2_entry.pack()
+
+        tk.Label(edit_window, text="Pilihan 3").pack()
+        opt3_entry = tk.Entry(edit_window, width=50)
+        opt3_entry.insert(0, question_data['options'][2])
+        opt3_entry.pack()
+
+        tk.Label(edit_window, text="Pilihan 4").pack()
+        opt4_entry = tk.Entry(edit_window, width=50)
+        opt4_entry.insert(0, question_data['options'][3])
+        opt4_entry.pack()
+
+        tk.Label(edit_window, text="Jawaban Benar").pack()
+        answer_entry = tk.Entry(edit_window, width=50)
+        answer_entry.insert(0, question_data['answer'])
+        answer_entry.pack()
+
+        tk.Button(edit_window, text="Simpan", command=save_edited_question).pack(pady=5)
+
+    def delete_question(self):
+        """Menghapus soal yang dipilih."""
+        selected = self.question_listbox.curselection()
+        if not selected:
+            messagebox.showerror("Error", "Pilih soal untuk dihapus.")
+            return
+
+        selected_index = selected[0]
+        if messagebox.askyesno("Konfirmasi", "Apakah Anda yakin ingin menghapus soal ini?"):
+            questions.delete(selected_index)
+            self.load_questions()
+            messagebox.showinfo("Sukses", "Soal berhasil dihapus.")
