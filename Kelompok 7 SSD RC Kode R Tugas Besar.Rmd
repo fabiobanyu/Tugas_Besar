@@ -1,0 +1,203 @@
+## **Import Library**
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(splines)
+library(mgcv)
+library(boot)
+library(gam)
+library(car)
+library(corrr)
+library(lmtest)
+library(Metrics)
+library(caret)
+library(knitr)
+library(rlang)
+library(patchwork)
+```
+
+## **Data Load & Preprocessing**
+
+```{r}
+# Data Load & Preprocessing
+set.seed(123)
+url <- "https://raw.githubusercontent.com/fabiobanyu/Tugas_Besar/main/DataSSD2024.xlsx"
+temp_file <- tempfile(fileext = ".xlsx")
+download.file(url, destfile = temp_file, mode = "wb")
+df <- read_excel(temp_file)
+
+df_clean <- df %>%
+  na.omit() %>%
+  select(-1, -2)
+
+colnames(df_clean) <- c("IPM", "P0_Miskin", "Pengeluaran_Perkapita", "Lama_sekolah", "AHH")
+
+head(df_clean)
+```
+
+## **Normalisasi (Min-Max Scalling) & Korelasi**
+
+```{r}
+# Min-Max Scaling
+df_scaled <- df_clean %>%
+  mutate(across(everything(), ~ (. - min(.)) / (max(.) - min(.))))
+
+# Korelasi
+cor_IPM <- df_scaled %>%
+  correlate() %>%
+  focus(IPM) %>%
+  rename(variable = 1) %>%
+  arrange(desc(abs(IPM)))
+print(cor_IPM)
+```
+
+## **Visualisasi ke Non-Linearan**
+
+```{r}
+# Visualisasi
+plot_list <- lapply(names(df_scaled)[-1], function(var) {
+  ggplot(df_scaled, aes(x = .data[[var]], y = IPM)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "loess", se = TRUE, color = "darkred") +
+    labs(title = paste(var, "vs IPM"), x = var, y = "IPM") +
+    theme_minimal()
+})
+wrap_plots(plot_list, ncol = 2)
+```
+
+## **Uji Asumsi**
+
+```{r}
+# Model Multivariat (semua variabel)
+model_lm <- lm(IPM ~ ., data = df_scaled)
+cat("VIF:\n"); print(vif(model_lm))
+cat("\nShapiro Test:\n"); print(shapiro.test(residuals(model_lm)))
+cat("\nDurbin-Watson Test:\n"); print(dwtest(model_lm))
+cat("\nBreusch-Pagan Test:\n"); print(bptest(model_lm))
+par(mfrow = c(2, 2)); plot(model_lm)
+```
+
+## **Polinomial (AHH)**
+
+```{r}
+# Polinomial (hanya AHH)
+cv_error_poly <- rep(NA, 10)
+for (i in 1:10) {
+  mod_poly <- glm(IPM ~ poly(AHH, i, raw = TRUE), data = df_scaled)
+  cv_error_poly[i] <- cv.glm(df_scaled, mod_poly, K = 10)$delta[1]
+}
+plot(1:10, cv_error_poly, type = "b", pch = 19, col = "blue",
+     xlab = "Derajat Polinomial", ylab = "CV Error",
+     main = "CV Error untuk Regresi Polinomial")
+```
+
+### Derajat Terbaik
+
+```{r}
+best_deg <- which.min(cv_error_poly)
+cat("Derajat Polinomial terbaik: ", best_deg)
+```
+
+### Model Polinom
+
+```{r}
+model_poly_best <- lm(IPM ~ poly(AHH, best_deg, raw = TRUE), data = df_scaled)
+summary(model_poly_best)
+```
+
+## **Spline (AHH)**
+
+```{r}
+# Spline (hanya AHH)
+cv_ns <- function(dfval) {
+  fit <- glm(IPM ~ ns(AHH, df = dfval), data = df_scaled)
+  cv.glm(df_scaled, fit, K = 10)$delta[1]
+}
+df_range <- 2:10
+cv_error_ns <- sapply(df_range, cv_ns)
+plot(df_range, cv_error_ns, type = "b", pch = 19, col = "darkgreen",
+     xlab = "Degrees of Freedom", ylab = "CV Error",
+     main = "CV Error untuk Natural Spline")
+```
+
+### Derajat Terbaik Spline
+
+```{r}
+best_df_ns <- df_range[which.min(cv_error_ns)]
+cat("Derajat Spline terbaik: ", best_df_ns)
+```
+
+### Model Spline
+
+```{r}
+model_ns_best <- lm(IPM ~ ns(AHH, df = best_df_ns), data = df_scaled)
+summary(model_ns_best)
+```
+
+## **GAM (AHH)**
+
+### Model GAM
+
+```{r}
+# GAM (hanya AHH)
+model_gam <- gam(IPM ~ s(AHH), data = df_scaled)
+summary(model_gam)
+```
+
+```{r}
+plot(model_gam, se = TRUE, col = "steelblue")
+```
+
+## **Fitted Plot**
+
+```{r}
+ #Plot hasil model polinomial dan spline
+df_scaled$fit_poly <- predict(model_poly_best)
+df_scaled$fit_ns <- predict(model_ns_best)
+df_scaled$fit_gam <- predict(model_gam, newdata = df_scaled)
+
+p_poly <- ggplot(df_scaled, aes(x = AHH, y = IPM)) +
+  geom_point(alpha = 0.5) +
+  geom_line(aes(y = fit_poly), color = "darkred") +
+  labs(title = "Fitted Polynomial", x = "AHH", y = "IPM") +
+  theme_minimal()
+
+p_ns <- ggplot(df_scaled, aes(x = AHH, y = IPM)) +
+  geom_point(alpha = 0.5) +
+  geom_line(aes(y = fit_ns), color = "darkgreen") +
+  labs(title = "Fitted Spline", x = "AHH", y = "IPM") +
+  theme_minimal()
+
+p_gam_fitted <- ggplot(df_scaled, aes(x = AHH, y = IPM)) +
+  geom_point(alpha = 0.5) + # Menampilkan titik data asli
+  geom_line(aes(y = fit_gam), color = "steelblue", linewidth = 1) + # Menampilkan garis fitted GAM
+  labs(title = "Fitted GAM", x = "AHH", y = "IPM") +
+  theme_minimal()
+
+p_poly + p_ns + p_gam_fitted
+```
+
+## **Evaluasi Model**
+
+```{r}
+# Evaluasi Model
+eval_model <- function(model, data, target) {
+  pred <- predict(model, newdata = data)
+  r2 <- cor(pred, data[[target]])^2
+  rmse_val <- rmse(data[[target]], pred)
+  data.frame(
+    AIC = AIC(model),
+    R2 = r2,
+    RMSE = rmse_val
+  )
+}
+
+results <- rbind(
+  cbind(Model = "Polynomial (AHH)", eval_model(model_poly_best, df_scaled, "IPM")),
+  cbind(Model = "Natural Spline (AHH)", eval_model(model_ns_best, df_scaled, "IPM")),
+  cbind(Model = "GAM (AHH)", eval_model(model_gam, df_scaled, "IPM")))
+  
+kable(results, caption = "Perbandingan Performa Model (AIC, R², RMSE)")
+```
